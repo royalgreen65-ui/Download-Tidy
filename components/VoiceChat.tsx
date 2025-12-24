@@ -19,7 +19,7 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({ isOpen, setIsOpen }) => {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isTTSLoading, setIsTTSLoading] = useState<string | null>(null);
-  
+
   const currentInputText = useRef('');
   const currentOutputText = useRef('');
   const [streamingUserText, setStreamingUserText] = useState('');
@@ -68,7 +68,7 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({ isOpen, setIsOpen }) => {
   };
 
   const stopAllPlayback = () => {
-    sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
+    sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) { } });
     sourcesRef.current.clear(); nextStartTimeRef.current = 0;
   };
 
@@ -164,8 +164,12 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({ isOpen, setIsOpen }) => {
             if (msg.serverContent?.inputTranscription) { currentInputText.current += msg.serverContent.inputTranscription.text; setStreamingUserText(currentInputText.current); }
             if (msg.serverContent?.outputTranscription) { currentOutputText.current += msg.serverContent.outputTranscription.text; setStreamingModelText(currentOutputText.current); }
             if (msg.serverContent?.turnComplete) {
-              const u = currentInputText.current.trim(); const m = currentOutputText.current.trim();
-              if (u || m) setMessages(prev => [...prev, ...(u ? [{role:'user', text:u}] : []), ...(m ? [{role:'model', text:m}] : []) as Message[]]);
+              const u = currentInputText.current.trim();
+              const m = currentOutputText.current.trim();
+              const newMsgs: Message[] = [];
+              if (u) newMsgs.push({ role: 'user', text: u });
+              if (m) newMsgs.push({ role: 'model', text: m });
+              if (newMsgs.length > 0) setMessages(prev => [...prev, ...newMsgs]);
               currentInputText.current = ''; currentOutputText.current = ''; setStreamingUserText(''); setStreamingModelText('');
             }
             const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
@@ -238,7 +242,7 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({ isOpen, setIsOpen }) => {
         </div>
 
         <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-center">
-           <canvas ref={canvasRef} width="200" height="40" className={`w-full max-w-[200px] h-10 transition-opacity duration-300 ${isLive ? 'opacity-100' : 'opacity-0.2'}`} />
+          <canvas ref={canvasRef} width="200" height="40" className={`w-full max-w-[200px] h-10 transition-opacity duration-300 ${isLive ? 'opacity-100' : 'opacity-0.2'}`} />
         </div>
 
         <div ref={scrollRef} className="flex-1 p-6 space-y-6 overflow-y-auto max-h-[400px] min-h-[350px] custom-scrollbar bg-white/50">
