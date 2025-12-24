@@ -5,15 +5,16 @@ import { FileCategory } from "./types";
 // Helper function to categorize files using Gemini API
 export const categorizeFiles = async (fileNames: string[]): Promise<Record<string, FileCategory>> => {
   // Always create a new GoogleGenAI instance right before making an API call
-  // Use process.env.API_KEY directly as required.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Categorize the following list of file names into one of these categories: 
-      ${Object.values(FileCategory).join(', ')}. 
-      Return an array of objects for each file.
+      contents: `Analyze the following file names and their extensions. 
+      Categorize each file into exactly one of these categories: ${Object.values(FileCategory).join(', ')}. 
+      
+      Consider both the semantic meaning of the name and the technical indicator of the extension (e.g., .pdf, .dmg, .zip, .js).
+      Return an array of objects mapping the original fileName to its category.
       
       Files: ${fileNames.join(', ')}`,
       config: {
@@ -25,12 +26,12 @@ export const categorizeFiles = async (fileNames: string[]): Promise<Record<strin
             properties: {
               fileName: {
                 type: Type.STRING,
-                description: "The original name of the file to be categorized."
+                description: "The original name of the file."
               },
               category: {
                 type: Type.STRING,
                 enum: Object.values(FileCategory),
-                description: "The category that best fits the file."
+                description: "The most appropriate category."
               },
             },
             required: ["fileName", "category"],
