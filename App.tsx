@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [rules, setRules] = useState<Record<string, FileCategory>>({});
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   
   const [processing, setProcessing] = useState<ProcessingState>({
     isScanning: false,
@@ -21,6 +22,23 @@ const App: React.FC = () => {
     error: null,
     progress: 0
   });
+
+  // Listen for PWA installation event
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handlePickSource = async () => {
     try {
@@ -67,7 +85,6 @@ const App: React.FC = () => {
         const categories = await categorizeFiles(fileNames);
         
         const updatedFiles = foundFiles.map(f => {
-          // Priority: User Rule > AI Suggestion
           const rule = rules[f.extension];
           return {
             ...f,
@@ -91,15 +108,12 @@ const App: React.FC = () => {
     const file = files.find(f => f.name === fileName);
     if (!file) return;
 
-    // Save as an automated sorting rule
     setRules(prev => ({ ...prev, [file.extension]: category }));
 
-    // Apply to current session
     setFiles(prev => prev.map(f => 
       f.extension === file.extension ? { ...f, suggestedCategory: category } : f
     ));
 
-    // Automatically select if now categorized
     if (category !== FileCategory.UNKNOWN) {
       setSelectedFiles(prev => {
         const next = new Set(prev);
@@ -129,7 +143,6 @@ const App: React.FC = () => {
       setProcessing(prev => ({ ...prev, isOrganizing: true, progress: 0 }));
       setStep('EXPORTING');
 
-      // Request destination folder (simulating "Completed Download" on Desktop)
       // @ts-ignore
       const destination = await window.showDirectoryPicker({ 
         mode: 'readwrite',
@@ -143,20 +156,17 @@ const App: React.FC = () => {
 
       for (const file of toMove) {
         const category = file.suggestedCategory;
-        // Create sub-directory in destination
         const catDir = await destination.getDirectoryHandle(category, { create: true });
         
         const fileHandle = file.handle as FileSystemFileHandle;
         const fileData = await fileHandle.getFile();
         
-        // Write to destination
         const newFileHandle = await catDir.getFileHandle(file.name, { create: true });
         // @ts-ignore
         const writable = await newFileHandle.createWritable();
         await writable.write(fileData);
         await writable.close();
 
-        // Remove from source
         await sourceHandle.removeEntry(file.name);
         
         count++;
@@ -217,30 +227,44 @@ const App: React.FC = () => {
           </p>
         </div>
 
-        {step === 'IDLE' && (
-          <button
-            onClick={handlePickSource}
-            className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 transition-all shadow-xl shadow-slate-200"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9l-2-2H5a2 2 0 00-2 2v11z" />
-            </svg>
-            Scan Downloads Folder
-          </button>
-        )}
-
-        {step === 'REVIEW' && (
-          <div className="flex gap-3">
-            <button onClick={reset} className="px-6 py-3 text-slate-500 hover:text-slate-700 font-semibold">Discard</button>
+        <div className="flex gap-3">
+          {deferredPrompt && step === 'IDLE' && (
             <button
-              onClick={startCleanup}
-              disabled={selectedFiles.size === 0}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-100"
+              onClick={handleInstallClick}
+              className="bg-white border border-slate-200 text-slate-700 px-6 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"
             >
-              Next: Verify Move ({selectedFiles.size})
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Install as Desktop App
             </button>
-          </div>
-        )}
+          )}
+
+          {step === 'IDLE' && (
+            <button
+              onClick={handlePickSource}
+              className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 transition-all shadow-xl shadow-slate-200"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9l-2-2H5a2 2 0 00-2 2v11z" />
+              </svg>
+              Scan Downloads Folder
+            </button>
+          )}
+
+          {step === 'REVIEW' && (
+            <div className="flex gap-3">
+              <button onClick={reset} className="px-6 py-3 text-slate-500 hover:text-slate-700 font-semibold">Discard</button>
+              <button
+                onClick={startCleanup}
+                disabled={selectedFiles.size === 0}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-100"
+              >
+                Next: Verify Move ({selectedFiles.size})
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Main UI States */}
@@ -386,24 +410,6 @@ const App: React.FC = () => {
                   ))}
                 </div>
               </div>
-
-              <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13.536 14.95a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM15.657 15.657l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 011.414-1.414z" /></svg>
-                </div>
-                <h4 className="text-lg font-bold mb-2">Automated Rules</h4>
-                <p className="text-slate-400 text-xs mb-4 leading-relaxed">Changes you make to categories apply to all similar extensions automatically.</p>
-                <div className="space-y-2">
-                  {Object.entries(rules).map(([ext, cat]) => (
-                    <div key={ext} className="flex items-center justify-between text-[10px] bg-white/5 p-2 rounded-lg border border-white/10">
-                      <span className="uppercase font-black text-blue-400">.{ext}</span>
-                      <span className="text-white/60">→</span>
-                      <span className="font-bold">{cat}</span>
-                    </div>
-                  ))}
-                  {Object.keys(rules).length === 0 && <p className="text-slate-600 text-[10px] italic">No custom rules created yet.</p>}
-                </div>
-              </div>
             </aside>
           </div>
         )}
@@ -428,15 +434,8 @@ const App: React.FC = () => {
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl border-2 border-blue-100">
                   <p className="text-xs text-blue-400 font-bold uppercase mb-1">Target Action</p>
-                  <p className="text-sm font-bold text-slate-700">Move to "Completed Download" Subfolders</p>
+                  <p className="text-sm font-bold text-slate-700">Move to Organized Subfolders</p>
                 </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex gap-3">
-                <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                <p className="text-xs text-amber-700 leading-relaxed">
-                  <strong>Verification Warning:</strong> You are about to move {selectedFiles.size} files. This will create new folders in your destination to separate documents, images, and other media.
-                </p>
               </div>
 
               <div className="flex items-center gap-4 pt-4">
@@ -444,14 +443,13 @@ const App: React.FC = () => {
                   onClick={() => setStep('REVIEW')}
                   className="flex-1 px-8 py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
                 >
-                  Go Back & Edit
+                  Go Back
                 </button>
                 <button 
                   onClick={executeExport}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-2"
                 >
                   Confirm & Export
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                 </button>
               </div>
             </div>
@@ -462,18 +460,11 @@ const App: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-full max-w-md bg-white p-10 rounded-3xl border border-slate-100 shadow-xl">
               <h2 className="text-2xl font-bold mb-2">Exporting Files...</h2>
-              <p className="text-slate-500 text-sm mb-8">Please keep this window open while we move your files.</p>
-              
               <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden mb-4">
                 <div 
                   className="absolute inset-y-0 left-0 bg-blue-600 transition-all duration-300 ease-out"
                   style={{ width: `${processing.progress}%` }}
                 ></div>
-              </div>
-              
-              <div className="flex justify-between text-xs font-bold uppercase">
-                <span className="text-blue-600">{processing.progress}% Finished</span>
-                <span className="text-slate-400">{selectedFiles.size} Items Total</span>
               </div>
             </div>
           </div>
@@ -484,34 +475,19 @@ const App: React.FC = () => {
             <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </div>
-            <h2 className="text-4xl font-black text-slate-900 mb-4">Done & Dusted!</h2>
-            <p className="text-slate-500 text-lg mb-10 leading-relaxed">
-              Successfully moved <span className="text-slate-900 font-bold">{selectedFiles.size} files</span> to organized folders. 
-              Your original downloads directory is now clean.
-            </p>
-            <div className="bg-slate-100 p-6 rounded-3xl mb-10 flex items-start gap-4 text-left">
-              <svg className="w-6 h-6 text-slate-400 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <div>
-                <p className="text-sm font-bold text-slate-700">Next Step:</p>
-                <p className="text-sm text-slate-500">You can now find your organized files in the <span className="font-bold">"Completed Download"</span> folder you selected on your desktop.</p>
-              </div>
-            </div>
+            <h2 className="text-4xl font-black text-slate-900 mb-4">Cleaned!</h2>
             <button
               onClick={reset}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-10 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-slate-200"
+              className="bg-slate-900 hover:bg-slate-800 text-white px-10 py-4 rounded-2xl font-bold transition-all"
             >
-              Start New Tidy Session
+              Start New Session
             </button>
           </div>
         )}
       </main>
 
       <footer className="mt-20 pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-xs font-medium">
-        <p>&copy; 2024 Download Tidy Engine • Ver 2.0 Desktop Preview</p>
-        <div className="flex gap-6">
-          <span className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full"></div> Fully Local Processing</span>
-          <span className="flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full"></div> PWA Supported</span>
-        </div>
+        <p>&copy; 2024 Download Tidy Engine • Ver 2.0</p>
       </footer>
     </div>
   );

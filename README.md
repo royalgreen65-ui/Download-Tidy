@@ -1,20 +1,17 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# Download Tidy - Installation Guide
 
-This contains everything you need to run your app locally.
+Because this app uses the **File System Access API** (to move your files) and **ES Modules**, it must be run from a local web server.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1jXn08PYWBa96ucGq6usoGMatS-MsBQix
+## How to Run
+1. Ensure you have [Node.js](https://nodejs.org/) installed on your computer.
+2. **Windows**: Double-click `run.bat`.
+3. **Mac/Linux**: Open terminal in this folder and run `sh run.sh`.
+4. The terminal will give you a link (usually `http://localhost:3000`). Open this in **Google Chrome** or **Microsoft Edge**.
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## How to turn it into an ".exe" (Desktop App)
+Once you have the app open in your browser:
+1. Look at the Address Bar (top right).
+2. Click the **Install Icon** (it looks like a computer with an arrow or a '+' sign).
+3. Click **Install**.
+4. The app will now appear on your Desktop and in your Start Menu/Dock as a standalone program.
