@@ -1,0 +1,5 @@
+{
+  "name": "Download Tidy",
+  "description": "An intelligent file organizer that scans your Downloads folder, categorizes files using AI, and helps you streamline your workspace with automated sorting rules.",
+  "requestFramePermissions": []
+}
