@@ -1,32 +1,14 @@
+
 {
-  "name": "file-zen",
+  "name": "download-tidy",
   "version": "1.0.0",
   "description": "AI File Organizer",
-  "type": "module",
+  "main": "index.html",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "start": "npx serve ."
   },
-  "dependencies": {
-    "@google/genai": "*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "recharts": "^2.12.7"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/node": "^20.14.9",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.19",
-    "gh-pages": "^6.3.0",
-    "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.4",
-    "typescript": "^5.2.2",
-    "vite": "^5.3.1",
-    "vite-plugin-pwa": "^1.2.0"
+    "serve": "^14.2.3"
   }
 }

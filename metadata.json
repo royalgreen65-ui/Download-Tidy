@@ -1,0 +1,7 @@
+{
+  "name": "FileZen Utility",
+  "description": "High-fidelity Windows 11 system utility for local folder organization, duplicate purging, and AI-assisted file classification.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

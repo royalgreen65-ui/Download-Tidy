@@ -1,80 +1,134 @@
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Tidy - AI File Organizer</title>
+    <title>FileZen Utility</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="/vite.svg" />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.cdnfonts.com/css/segoe-ui-4" rel="stylesheet">
     <style>
         :root {
-            --brand-primary: #2563eb;
-            --brand-secondary: #4f46e5;
+            --win-accent: #0078d4;
+            --win-accent-soft: rgba(0, 120, 212, 0.1);
+            --win-bg: #f9f9f9;
+            --win-sidebar: rgba(243, 243, 243, 0.85);
+            --win-card: #ffffff;
+            --win-border: rgba(0, 0, 0, 0.08);
+            --win-text: #1a1a1a;
+            --win-text-secondary: #5f5f5f;
         }
 
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            scroll-behavior: smooth;
+        [data-theme='dark'] {
+            --win-bg: #1c1c1c;
+            --win-sidebar: rgba(32, 32, 32, 0.85);
+            --win-card: #2d2d2d;
+            --win-border: rgba(255, 255, 255, 0.1);
+            --win-text: #ffffff;
+            --win-text-secondary: #b0b0b0;
+            --win-accent: #60cdff;
+            --win-accent-soft: rgba(96, 205, 255, 0.15);
         }
 
-        .glass {
-            background: rgba(255, 255, 255, 0.75);
-            -webkit-backdrop-filter: blur(12px);
-            backdrop-filter: blur(12px);
+        body { 
+            font-family: 'Segoe UI', 'Segoe UI Variable', system-ui, -apple-system, sans-serif; 
+            background-color: var(--win-bg);
+            color: var(--win-text);
+            overflow: hidden;
+            height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 5px;
+        /* Windows 11 Mica Effect */
+        .mica-sidebar {
+            background: var(--win-sidebar);
+            backdrop-filter: blur(30px) saturate(125%);
+            -webkit-backdrop-filter: blur(30px) saturate(125%);
+            border-right: 1px solid var(--win-border);
         }
 
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
+        .win-card {
+            background: var(--win-card);
+            border: 1px solid var(--win-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #e2e8f0;
-            border-radius: 10px;
-            border: 1px solid transparent;
-            background-clip: content-box;
+        .win-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+            border-color: var(--win-accent-soft);
+            transform: translateY(-1px);
         }
 
+        .win-btn-primary {
+            background-color: var(--win-accent);
+            color: white;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .win-btn-primary:hover {
+            opacity: 0.9;
+            filter: brightness(1.1);
+        }
+
+        .win-btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+            background: rgba(128, 128, 128, 0.3); 
+            border-radius: 10px; 
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #cbd5e1;
+            background: rgba(128, 128, 128, 0.5);
+            background-clip: padding-box;
         }
 
-        .animate-soft-in {
-            animation: softIn 0.5s ease-out;
+        .animate-win-fade {
+            animation: winFade 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
         }
 
-        @keyframes softIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes winFade {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .premium-shadow {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+        .nav-item-active {
+            position: relative;
         }
-
-        input:focus,
-        select:focus {
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        .nav-item-active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 25%;
+            height: 50%;
+            width: 3px;
+            background: var(--win-accent);
+            border-radius: 2px;
         }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3"
+  }
+}
+</script>
 </head>
-
-<body class="bg-slate-50/50 text-slate-900 min-h-screen selection:bg-blue-100 selection:text-blue-900">
-    <div id="root"></div>
-    <script type="module" src="/src/index.tsx"></script>
+<body class="selection:bg-blue-200">
+    <div id="root" class="h-full"></div>
 </body>
-
 </html>
